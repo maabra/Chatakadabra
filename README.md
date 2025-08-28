@@ -6,6 +6,8 @@
 
 
 #Ključne mogućnosti:
+
+
 JWT Autentifikacija, sigurna prijava s JWT tokenima za autentifikaciju i autorizaciju korisnika
 
 Glavna chat soba, zadana glavna chat soba podijeljena i sinkronizirana kroz više FastAPI servera
@@ -19,6 +21,8 @@ Otpornost na greške, preživljava kvarove servera/mreže koristeći Docker kont
 
 
 #Korišteni principi RS:
+
+
 DynamoDB replikacija, chat podaci se automatski repliciraju kroz DynamoDB Global Tables za otpornost na greške, drugim riječima ako jedna otkaže, druge nastavljaju raditi
 
 Asinkroni xustav, kritične operacije koriste Python asyncio za neblokiran rad, omogućujući tisuće istovremenih WebSocket konekcija
