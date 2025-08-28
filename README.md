@@ -33,3 +33,9 @@ Containerized State, Docker kontejneri omogućuju stateless backend servise, s D
 
 JWT Sigurnost, svaka WebSocket konekcija i API poziv autoriziran je putem JWT tokena za sigurnu komunikaciju
 
+
+Prvi izgled frontenda, tj. UI-a:
+
+
+<img width="2559" height="1276" alt="Screenshot 2025-08-28 213154" src="https://github.com/user-attachments/assets/9be4be96-4ce0-412a-8d31-ea4841b060f8" />
+<img width="2558" height="1388" alt="Screenshot 2025-08-28 213133" src="https://github.com/user-attachments/assets/033a521e-633c-4bd7-87b7-f9c34734062c" />
