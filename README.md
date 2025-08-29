@@ -2,7 +2,7 @@
 
 (podložno promjenama)
 
-#Chatakadabra je distribuirana chat platforma fokusirana na korisnika, inspirirana klasičnim chat sobama. Izgrađena je koristeći koncepte distribuiranih sustava. Korisnici se autentificiraju pomoću JWT tokena, a sustav osigurava sigurnu komunikaciju u stvarnom vremenu. Platforma podržava više chat soba, backend servere i dinamičko stvaranje soba koristeći FastAPI, DynamoDB i Docker.
+#Chatakadabra je distribuirana chat platforma inspirirana klasičnim chat sobama. Izgrađena je koristeći koncepte distribuiranih sustava. Korisnici se autentificiraju pomoću JWT tokena, a sustav osigurava sigurnu komunikaciju u stvarnom vremenu. Platforma podržava više chat soba, backend servere i dinamičko stvaranje soba koristeći FastAPI, DynamoDB i Docker.
 
 
 #Ključne mogućnosti:
