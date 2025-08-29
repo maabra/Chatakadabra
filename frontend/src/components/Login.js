@@ -14,13 +14,14 @@ const Login = ({ onLogin }) => {
     <div className="login-container">
       <div className="login-window">
         <div className="title-bar">
-          <div className="title-bar-text">🪄 Chatakadabra - Login</div>
+          <div className="title-bar-text">Chatakadabra</div>
         </div>
         
         <div className="window-body login-body">
           <div className="login-header">
-            <h2>Enter Chat Room</h2>
-            <p>Enter username:</p>
+            <h2>Login to app</h2>
+            <p></p>
+            <p>Enter username below</p>
           </div>
 
           <form onSubmit={handleSubmit} className="login-form">
@@ -39,13 +40,13 @@ const Login = ({ onLogin }) => {
 
             <div className="field-row">
               <button type="submit" disabled={!username.trim()}>
-                Enter Chat
+                Enter
               </button>
             </div>
           </form>
 
           <div className="login-footer">
-            <p>TEMP TEXT</p>
+            <p>Splash text!</p>
           </div>
         </div>
       </div>

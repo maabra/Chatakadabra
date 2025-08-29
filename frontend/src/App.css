@@ -11,8 +11,56 @@ body {
   overflow: hidden;
 }
 
+:root {
+  --ui-scale: 2;
+}
+
+/* Scale entire app (main screens) */
 .app-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  transform: scale(var(--ui-scale));
+  transform-origin: 0 0;
+  width: calc(100% / var(--ui-scale));
+  height: calc(100vh / var(--ui-scale));
+}
+
+.login-container {
   height: 100vh;
+  background: #008080;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-image: repeating-linear-gradient(
+    45deg,
+    #008080,
+    #008080 10px,
+    #006666 10px,
+    #006666 20px
+  );
+}
+
+/* Scale login screen */
+.login-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  transform: scale(var(--ui-scale));
+  transform-origin: 0 0;
+  width: calc(100% / var(--ui-scale));
+  height: calc(100vh / var(--ui-scale));
+}
+
+/* Optional: ensure no extra scrollbars due to scaling */
+html, body, #root {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+.app-container {
+  height: calc(100vh / var(--ui-scale));
   display: flex;
   flex-direction: column;
   background: #c0c0c0;
@@ -60,6 +108,8 @@ body {
   background: #c0c0c0;
   display: flex;
   flex-direction: column;
+  /* Allow children to shrink inside scaled viewport */
+  min-height: 0;
 }
 
 .status-bar {
@@ -82,6 +132,8 @@ body {
   flex: 1;
   display: flex;
   gap: 4px;
+  /* Prevent overflow clipping of bottom input */
+  min-height: 0;
 }
 
 .sidebar {
@@ -92,21 +144,8 @@ body {
 .chat-area {
   flex: 1;
   background: #c0c0c0;
-}
-
-.login-container {
-  height: 100vh;
-  background: #008080;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background-image: repeating-linear-gradient(
-    45deg,
-    #008080,
-    #008080 10px,
-    #006666 10px,
-    #006666 20px
-  );
+  /* Let inner panel manage its own overflow */
+  min-height: 0;
 }
 
 .login-window {
@@ -209,8 +248,13 @@ body {
 .add-room-btn {
   background: #00ffff;
   border: 1px outset #00ffff;
-  width: 20px;
+  /* Wider clickable button without changing sidebar width */
+  min-width: 64px;
   height: 18px;
+  padding: 0 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
   font-size: 10px;
   color: #000000;
@@ -293,12 +337,27 @@ body {
   color: #000080;
 }
 
+.panel-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.server-info {
+  background: #c0c0c0;
+  border: 1px inset #c0c0c0;
+  padding: 2px 6px;
+  color: #000000;
+}
+
 .chat-room-panel {
   background: #c0c0c0;
   border: 2px inset #c0c0c0;
   height: 100%;
   display: flex;
   flex-direction: column;
+  /* Critical for keeping bottom input visible */
+  min-height: 0;
 }
 
 .chat-header {
@@ -328,7 +387,8 @@ body {
   background: white;
   border: 1px inset #c0c0c0;
   margin: 2px;
-  overflow: hidden;
+  /* Scroll messages instead of clipping the input */
+  overflow: auto;
 }
 
 .messages-list {
@@ -498,4 +558,51 @@ body {
 
 ::-webkit-scrollbar-button:active {
   border: 1px inset #c0c0c0;
+}
+
+/* Overlay / Inspector */
+.overlay-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+
+.overlay-window {
+  width: 520px;
+  max-width: 90vw;
+  background: #c0c0c0;
+  border: 2px outset #c0c0c0;
+  box-shadow: 4px 4px 12px rgba(0,0,0,0.4);
+}
+
+.inspector-body {
+  padding: 8px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.inspector-section {
+  background: #ffffff;
+  border: 2px inset #c0c0c0;
+  padding: 8px;
+}
+
+.inspector-list {
+  max-height: 220px;
+  overflow: auto;
+}
+
+.inspector-item {
+  padding: 4px;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.inspector-meta {
+  font-size: 10px;
+  color: #555;
 }

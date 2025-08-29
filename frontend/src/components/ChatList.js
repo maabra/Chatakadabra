@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 
-const ChatList = ({ rooms, onRoomSelect, onAddRoom, selectedRoom }) => {
+const ChatList = ({ rooms, onRoomSelect, onAddRoom, selectedRoom, serverInfo }) => {
   const [newRoomName, setNewRoomName] = useState('');
   const [showAddForm, setShowAddForm] = useState(false);
 
@@ -21,7 +21,7 @@ const ChatList = ({ rooms, onRoomSelect, onAddRoom, selectedRoom }) => {
           className="add-room-btn"
           onClick={() => setShowAddForm(!showAddForm)}
         >
-          {showAddForm ? 'NO' : 'YES'}
+          {showAddForm ? 'CANCEL' : 'NEW'}
         </button>
       </div>
 
@@ -33,7 +33,7 @@ const ChatList = ({ rooms, onRoomSelect, onAddRoom, selectedRoom }) => {
               placeholder="Room name..."
               value={newRoomName}
               onChange={(e) => setNewRoomName(e.target.value)}
-              maxLength="25"
+              maxLength="40"
               autoFocus
             />
             <button type="submit">Add</button>
@@ -56,6 +56,11 @@ const ChatList = ({ rooms, onRoomSelect, onAddRoom, selectedRoom }) => {
 
       <div className="panel-footer">
         <div className="room-count">{rooms.length} rooms available</div>
+        {/* {serverInfo?.current && (
+          <div className="server-info">
+            Backend: {serverInfo.current.name} ({serverInfo.index + 1}/{serverInfo.total})
+          </div>
+        )} */}
       </div>
     </div>
   );

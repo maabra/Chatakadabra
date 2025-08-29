@@ -1,12 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 
-const ChatRoom = ({ room, currentUser }) => {
-  const [messages, setMessages] = useState([
-    { id: 1, user: 'System', text: `Welcome to ${room.name}!`, timestamp: new Date(), isSystem: true },
-    { id: 2, user: 'Alice', text: 'Hey everyone! 👋', timestamp: new Date(Date.now() - 120000) },
-    { id: 3, user: 'Bob', text: 'What\'s up?', timestamp: new Date(Date.now() - 60000) },
-    { id: 4, user: 'Charlie', text: 'Anyone know about the new updates?', timestamp: new Date(Date.now() - 30000) }
-  ]);
+const ChatRoom = ({ room, currentUser, messages, onSend, onSpam }) => {
   const [newMessage, setNewMessage] = useState('');
   const messagesEndRef = useRef(null);
 
@@ -20,17 +14,9 @@ const ChatRoom = ({ room, currentUser }) => {
 
   const handleSendMessage = (e) => {
     e.preventDefault();
-    if (newMessage.trim()) {
-      const message = {
-        id: Date.now(),
-        user: currentUser.username,
-        text: newMessage.trim(),
-        timestamp: new Date(),
-        isSystem: false
-      };
-      setMessages([...messages, message]);
-      setNewMessage('');
-    }
+    if (!newMessage.trim()) return;
+    onSend(room.id, newMessage, currentUser.username);
+    setNewMessage('');
   };
 
   const formatTime = (timestamp) => {
@@ -46,7 +32,7 @@ const ChatRoom = ({ room, currentUser }) => {
         <h3>{room.name}</h3>
         <div className="room-info">
           <span>{room.users} users online</span>
-          <span>Connected</span>
+          <span>Connected to room</span>
         </div>
       </div>
 
@@ -58,11 +44,9 @@ const ChatRoom = ({ room, currentUser }) => {
               className={`message ${message.isSystem ? 'system-message' : ''} ${message.user === currentUser.username ? 'own-message' : ''}`}
             >
               <div className="message-header">
-                <span className="message-user">
-                  {message.isSystem ? 'SYSTEM' : 'USER'} {message.user}
-                </span>
+                <span className="message-user">{message.isSystem ? 'SYSTEM' : 'USER'} {message.user}</span>
                 <span className="message-time">
-                  {formatTime(message.timestamp)}
+                  {formatTime(message.timestamp)}{message.serverIndex !== undefined ? ` · ${message.servedBy}` : ''}
                 </span>
               </div>
               <div className="message-text">{message.text}</div>
@@ -85,6 +69,11 @@ const ChatRoom = ({ room, currentUser }) => {
           <button type="submit" disabled={!newMessage.trim()}>
             Send
           </button>
+          {onSpam && (
+            <button type="button" onClick={() => onSpam(room.id, 10)}>
+              Spam 10 RND
+            </button>
+          )}
         </form>
       </div>
     </div>
