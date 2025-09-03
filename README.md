@@ -1,12 +1,12 @@
 Špranca projekta 
-\
+
 (podložno promjenama)
-\
+
 **Chatakadabra je distribuirana chat platforma inspirirana klasičnim chat sobama. Izgrađena će biti koristeći koncepte distribuiranih sustava. Korisnici se autentificiraju pomoću JWT tokena, a sustav osigurava sigurnu komunikaciju u stvarnom vremenu. Platforma podržava više chat soba, backend servere i dinamičko stvaranje soba koristeći FastAPI, DynamoDB i Docker.**
-\
+
 
 **Ključne mogućnosti:**
-\
+
 
 JWT Autentifikacija, sigurna prijava s JWT tokenima za autentifikaciju i autorizaciju korisnika
 
@@ -19,9 +19,8 @@ Real-time sinkronizacija, sve poruke koriste asyncio/aiohttp za asinkronu komuni
 Otpornost na greške, preživljava kvarove servera/mreže koristeći Docker kontejnere i DynamoDB replikaciju
 
 
-\
 **Korišteni principi RS:**
-\
+
 
 DynamoDB replikacija, chat podaci se automatski repliciraju kroz DynamoDB Global Tables za otpornost na greške, drugim riječima ako jedna otkaže, druge nastavljaju raditi
 
