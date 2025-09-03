@@ -25,7 +25,7 @@ const ChatRoom = ({ room, currentUser, messages, onSend, onSpam }) => {
       minute: '2-digit' 
     });
   };
-
+// Komentar za change za Source Control 
   return (
     <div className="chat-room-panel">
       <div className="chat-header">

@@ -42,6 +42,7 @@ function App() {
   // };
   // const buildInitialMessages = (rs) => rs.reduce((acc, r) => { acc[r.id] = seedMessages(r.name); return acc; }, {});
   // const [messagesByRoom, setMessagesByRoom] = useState(buildInitialMessages(initialRooms));
+  // Komentar za change za Source Control
 
   const [rooms, setRooms] = useState([]);
   const [messagesByRoom, setMessagesByRoom] = useState({});

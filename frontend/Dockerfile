@@ -1,4 +1,4 @@
-# Use Node.js official image
+# Use Node.js official image - Komentar za change za Source Control
 FROM node:18-alpine
 
 # Set working directory
