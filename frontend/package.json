@@ -1,7 +1,7 @@
 {
   "name": "chatakadabra-frontend",
   "version": "1.0.0",
-  "description": "Retro Windows 95 style chat application frontend",
+  "description": "Chatakadabra application frontend",
   "private": true,
   "dependencies": {
     "react": "^18.2.0",

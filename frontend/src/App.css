@@ -1,3 +1,5 @@
+/* Bojim se da sam previše vremena potrošio na design */
+
 * {
   box-sizing: border-box;
 }
@@ -15,7 +17,6 @@ body {
   --ui-scale: 2;
 }
 
-/* Scale entire app (main screens) */
 .app-container {
   position: fixed;
   top: 0;
@@ -41,7 +42,6 @@ body {
   );
 }
 
-/* Scale login screen */
 .login-container {
   position: fixed;
   top: 0;
@@ -52,7 +52,6 @@ body {
   height: calc(100vh / var(--ui-scale));
 }
 
-/* Optional: ensure no extra scrollbars due to scaling */
 html, body, #root {
   width: 100%;
   height: 100%;
@@ -108,7 +107,6 @@ html, body, #root {
   background: #c0c0c0;
   display: flex;
   flex-direction: column;
-  /* Allow children to shrink inside scaled viewport */
   min-height: 0;
 }
 
@@ -132,7 +130,6 @@ html, body, #root {
   flex: 1;
   display: flex;
   gap: 4px;
-  /* Prevent overflow clipping of bottom input */
   min-height: 0;
 }
 
@@ -144,7 +141,6 @@ html, body, #root {
 .chat-area {
   flex: 1;
   background: #c0c0c0;
-  /* Let inner panel manage its own overflow */
   min-height: 0;
 }
 
@@ -248,7 +244,6 @@ html, body, #root {
 .add-room-btn {
   background: #00ffff;
   border: 1px outset #00ffff;
-  /* Wider clickable button without changing sidebar width */
   min-width: 64px;
   height: 18px;
   padding: 0 10px;
@@ -356,7 +351,6 @@ html, body, #root {
   height: 100%;
   display: flex;
   flex-direction: column;
-  /* Critical for keeping bottom input visible */
   min-height: 0;
 }
 
@@ -387,7 +381,6 @@ html, body, #root {
   background: white;
   border: 1px inset #c0c0c0;
   margin: 2px;
-  /* Scroll messages instead of clipping the input */
   overflow: auto;
 }
 
@@ -560,7 +553,6 @@ html, body, #root {
   border: 1px inset #c0c0c0;
 }
 
-/* Overlay / Inspector */
 .overlay-backdrop {
   position: fixed;
   inset: 0;

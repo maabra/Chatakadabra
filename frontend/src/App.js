@@ -1,130 +1,205 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import './App.css';
-import Login from './components/Login';
+import Login from './components/Login.js';
 import ChatList from './components/ChatList';
 import ChatRoom from './components/ChatRoom';
 import NetworkInspector from './components/NetworkInspector';
+import { api } from './api';
+
+// frontend: npm start
+// backend: uvicorn main:app --reload --host 0.0.0.0 --port 8000
 
 function App() {
+
   const [currentUser, setCurrentUser] = useState(null);
   const [selectedRoom, setSelectedRoom] = useState(null);
+
   const servers = [
     { id: 'b-1', name: 'backend-1', role: 'api' },
     { id: 'b-2', name: 'backend-2', role: 'api' },
     { id: 'b-3', name: 'backend-3', role: 'api' }
   ];
+  
   const [currentServerIndex, setCurrentServerIndex] = useState(0);
   const pickServerIndex = (userId) => userId % servers.length;
+
   const [inspectorOpen, setInspectorOpen] = useState(false);
-  const initialRooms = [
-    { id: 1, name: 'General Chat', users: 12 },
-    { id: 2, name: 'Test 1', users: 8 },
-    { id: 3, name: 'Test 2', users: 15 }
-  ];
-  const [rooms, setRooms] = useState(initialRooms);
 
-  const seedMessages = (roomName) => {
-    const now = Date.now();
-    const byRoom = {
-      'General Chat': 'Bob',
-      'Test 2': 'Alice',
-      'Test 1': 'Charlie'
-    };
-    const user = byRoom[roomName] || 'Alice';
-    return [
-      { id: now, type: 'text', user: 'message:', text: `Welcome to ${roomName}!`, timestamp: new Date(), isSystem: true },
-      { id: now + 1, type: 'text', user, text: '1', timestamp: new Date() }
-    ];
-  };
+  // const initialRooms = [
+  //   { id: 1, name: 'General Chat', users: 12 },
+  //   { id: 2, name: 'Test 1', users: 8 },
+  //   { id: 3, name: 'Test 2', users: 15 }
+  // ];
+  // const [rooms, setRooms] = useState(initialRooms);
+  // const seedMessages = (roomName) => {
+  //   const now = Date.now();
+  //   const byRoom = { 'General Chat': 'Bob', 'Test 2': 'Alice', 'Test 1': 'Charlie' };
+  //   const user = byRoom[roomName] || 'Alice';
+  //   return [
+  //     { id: now, type: 'text', user: 'message:', text: `Welcome to ${roomName}!`, timestamp: new Date(), isSystem: true },
+  //     { id: now + 1, type: 'text', user, text: '1', timestamp: new Date() }
+  //   ];
+  // };
+  // const buildInitialMessages = (rs) => rs.reduce((acc, r) => { acc[r.id] = seedMessages(r.name); return acc; }, {});
+  // const [messagesByRoom, setMessagesByRoom] = useState(buildInitialMessages(initialRooms));
 
-  const buildInitialMessages = (rs) => rs.reduce((acc, r) => {
-    acc[r.id] = seedMessages(r.name);
-    return acc;
-  }, {});
+  const [rooms, setRooms] = useState([]);
+  const [messagesByRoom, setMessagesByRoom] = useState({});
+  const [apiReady, setApiReady] = useState(false);
 
-  const [messagesByRoom, setMessagesByRoom] = useState(buildInitialMessages(initialRooms));
-
-  // Simple hash to pick a backend for a given username (simulated distribution)
-  const hashString = (s) => {
-    let h = 0;
-    for (let i = 0; i < s.length; i++) h = ((h << 5) - h) + s.charCodeAt(i);
-    return Math.abs(h);
-  };
+  // Hashiranje - test
+  const hashString = (s) => { let h = 0; for (let i = 0; i < s.length; i++) h = ((h << 5) - h) + s.charCodeAt(i); return Math.abs(h); };
   const pickServerIndexForUsername = (username) => hashString(username) % servers.length;
 
+  // Standardizacija poruke
+  const normalizeFromApi = (m) => {
+    const idx = pickServerIndexForUsername(m.user || 'unknown');
+    const ts = typeof m.timestamp === 'number' ? new Date(m.timestamp * 1000) : new Date(m.timestamp);
+    return { ...m, timestamp: ts, servedBy: servers[idx].name, serverIndex: idx };
+  };
+
+  // Loading
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        await api.health();
+        if (!mounted) return;
+        setApiReady(true);
+        const serverRooms = await api.getRooms();
+        if (!mounted) return;
+        setRooms(serverRooms.map(r => ({ id: r.id, name: r.name, users: 0 })));
+      } catch (e) {
+        if (!mounted) return;
+        setApiReady(false);
+        setRooms([]);
+        setMessagesByRoom({});
+      }
+    })();
+    return () => { mounted = false; };
+  }, []);
+
+  // Prijava, unique login uz server index
   const handleLogin = (username) => {
     const id = Date.now();
     setCurrentUser({ username, id });
     setCurrentServerIndex(pickServerIndex(id));
   };
 
+  // Odabir room-a
   const handleRoomSelect = (room) => {
     setSelectedRoom(room);
+    (async () => {
+      try {
+        const msgs = await api.getMessages(room.id);
+        const normalized = msgs.map(normalizeFromApi);
+        setMessagesByRoom(prev => ({ ...prev, [room.id]: normalized }));
+      } catch {
+      }
+    })();
   };
 
+  // Dodavanje room-a
   const handleAddRoom = (roomName) => {
-    const newRoom = {
-      id: Date.now(),
-      name: roomName,
-      users: 1
-    };
-    setRooms([...rooms, newRoom]);
-  setMessagesByRoom((prev) => ({ ...prev, [newRoom.id]: [] }));
+    (async () => {
+      try {
+        const created = await api.createRoom(roomName);
+        setRooms(prev => [...prev, { id: created.id, name: created.name, users: 0 }]);
+        setMessagesByRoom(prev => ({ ...prev, [created.id]: [] }));
+      } catch {
+      }
+    })();
   };
 
+  // Slanje poruke, POST na backendu
   const handleSendMessage = (roomId, text, username) => {
-    const idx = pickServerIndexForUsername(username);
-    const msg = {
-      id: Date.now(),
-      type: 'text',
-      user: username,
-      text: text.trim(),
-      timestamp: new Date(),
-      isSystem: false,
-      servedBy: servers[idx].name,
-      serverIndex: idx
-    };
-    setMessagesByRoom((prev) => ({
-      ...prev,
-      [roomId]: [...(prev[roomId] || []), msg]
-    }));
+    (async () => {
+      try {
+        const saved = await api.sendMessage(roomId, text, username);
+        const normalized = normalizeFromApi(saved);
+        setMessagesByRoom((prev) => ({
+          ...prev,
+          [roomId]: [...(prev[roomId] || []), normalized]
+        }));
+      } catch {
+      }
+    })();
   };
 
-  const spoofUsers = ['Alice','Bob','Charlie','Dana','Eve','Frank','Grace','Heidi'];
+  
+  // const handleSendMessage = (roomId, text, username) => {
+  //   const idx = pickServerIndexForUsername(username);
+  //   const msg = {
+  //     id: Date.now(),
+  //     type: 'text',
+  //     user: username,
+  //     text: text.trim(),
+  //     timestamp: new Date(),
+  //     isSystem: false,
+  //     servedBy: servers[idx].name,
+  //     serverIndex: idx
+  //   };
+  //   setMessagesByRoom((prev) => ({
+  //     ...prev,
+  //     [roomId]: [...(prev[roomId] || []), msg]
+  //   }));
+  // };
+
+  // Spam generator
+  const spoofUsers = ['Alice','Bob','Marko','Danijela','Eve','Frank','Petra','Heidi'];
   const spoofTexts = ['Wow!','hi!','Nice','hello!','Hi','Hi!','Cool!','Test','ok','yo'];
-
   const handleSpam = (roomId, count = 10) => {
-    const nowBase = Date.now();
-    const burst = [];
-    for (let i = 0; i < count; i++) {
-      const user = spoofUsers[Math.floor(Math.random() * spoofUsers.length)];
-      const text = spoofTexts[Math.floor(Math.random() * spoofTexts.length)];
-      const idx = pickServerIndexForUsername(user);
-      burst.push({
-        id: nowBase + i,
-        type: 'text',
-        user,
-        text,
-        timestamp: new Date(),
-        isSystem: false,
-        servedBy: servers[idx].name,
-        serverIndex: idx
-      });
-    }
-    setMessagesByRoom((prev) => ({
-      ...prev,
-      [roomId]: [...(prev[roomId] || []), ...burst]
-    }));
+    (async () => {
+      const ops = [];
+      for (let i = 0; i < count; i++) {
+        const user = spoofUsers[Math.floor(Math.random() * spoofUsers.length)];
+        const text = spoofTexts[Math.floor(Math.random() * spoofUsers.length) % spoofTexts.length];
+        ops.push(api.sendMessage(roomId, text, user));
+      }
+      try {
+        const results = await Promise.allSettled(ops);
+        const appended = results.filter(r => r.status === 'fulfilled').map(r => normalizeFromApi(r.value));
+        if (appended.length) {
+          setMessagesByRoom(prev => ({ ...prev, [roomId]: [...(prev[roomId] || []), ...appended] }));
+        }
+      } catch {}
+    })();
   };
 
+  // const handleSpam = (roomId, count = 10) => {
+  //   const nowBase = Date.now();
+  //   const burst = [];
+  //   for (let i = 0; i < count; i++) {
+  //     const user = spoofUsers[Math.floor(Math.random() * spoofUsers.length)];
+  //     const text = spoofTexts[Math.floor(Math.random() * spoofTexts.length)];
+  //     const idx = pickServerIndexForUsername(user);
+  //     burst.push({
+  //       id: nowBase + i,
+  //       type: 'text',
+  //       user,
+  //       text,
+  //       timestamp: new Date(),
+  //       isSystem: false,
+  //       servedBy: servers[idx].name,
+  //       serverIndex: idx
+  //     });
+  //   }
+  //   setMessagesByRoom((prev) => ({
+  //     ...prev,
+  //     [roomId]: [...(prev[roomId] || []), ...burst]
+  //   }));
+  // };
+
+  // Login komponenta, ponekad izbacuje error - još testirati
   if (!currentUser) {
     return <Login onLogin={handleLogin} />;
   }
 
+  // GLAVNI UI: naslovna traka, status traka, sidebar s listom soba, prostor za chat
   return (
     <div className="app-container">
       <div className="title-bar">
-        <div className="title-bar-text">🪄 Chatakadabra v1.1</div>
+        <div className="title-bar-text">🪄 Chatakadabra v1.2</div>
         <div className="title-bar-controls">
           <button className="title-bar-control" title="Network Inspector" onClick={() => setInspectorOpen(true)}>i</button>
           <button className="title-bar-control" onClick={() => setCurrentUser(null)}>
@@ -136,7 +211,7 @@ function App() {
       <div className="window-body">
         <div className="status-bar">
           <div className="status-field">User: {currentUser.username}</div>
-          <div className="status-field">Connected to app</div>
+          <div className="status-field">Connected: {apiReady ? 'API' : 'API DOWN'}</div>
           <div className="status-field">Rooms: {rooms.length}</div>
         </div>
 
@@ -184,6 +259,7 @@ function App() {
           </div>
         </div>
       </div>
+
       {inspectorOpen && (
         <NetworkInspector
           servers={servers}

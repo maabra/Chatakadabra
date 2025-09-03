@@ -8,14 +8,13 @@ services:
     volumes:
       - ./frontend:/app
       - /app/node_modules
-    environment:
-      - CHOKIDAR_USEPOLLING=true
     command: npm start
 
-  # Backend service placeholder for future development
-  # backend:
-  #   build: ./backend
-  #   ports:
-  #     - "8000:8000"
-  #   environment:
-  #     - NODE_ENV=development
+  backend:
+    build: ./backend
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app
+    environment:
+      - PYTHONUNBUFFERED=1
