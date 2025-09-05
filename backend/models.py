@@ -1,6 +1,5 @@
 from pydantic import BaseModel
 
-# Komentar za change za Source Control
 class Room(BaseModel):
     id: int
     name: str
@@ -27,6 +26,6 @@ class LoginIn(BaseModel):
     username: str
 
 
-class LoginOut(BaseModel):
-    id: int
-    username: str
+# class LoginOut(BaseModel):
+#     id: int
+#     username: str

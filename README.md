@@ -22,13 +22,13 @@ Otpornost na greške, preživljava kvarove servera/mreže koristeći Docker kont
 **Korišteni principi RS:**
 
 
-DynamoDB replikacija, chat podaci se automatski repliciraju kroz DynamoDB Global Tables za otpornost na greške, drugim riječima ako jedna otkaže, druge nastavljaju raditi
+DynamoDB replikacija, tj. chat podaci se automatski repliciraju kroz DynamoDB Global Tables za otpornost na greške, drugim riječima ako jedna otkaže, druge nastavljaju raditi
 
-Asinkroni xustav, kritične operacije koriste Python asyncio za neblokiran rad, omogućujući tisuće istovremenih WebSocket konekcija
+Asinkroni sustav, tj. kritične operacije koriste Python asyncio za neblokiran rad, omogućujući tisuće istovremenih WebSocket konekcija
 
-Eventual consistency, DynamoDB osigurava eventual consistency za chat poruke, što može proći za chat aplikacije
+Eventual consistency, tj. DynamoDB osigurava eventual consistency za chat poruke, što može proći za chat aplikacije
 
-Containerized State, Docker kontejneri omogućuju stateless backend servise, s DynamoDB kao vanjskim state store-om
+Containerized state, tj. Docker kontejneri omogućuju stateless backend servise, s DynamoDB kao vanjskim state store-om
 
-JWT Sigurnost, svaka WebSocket konekcija i API poziv autoriziran je putem JWT tokena za sigurnu komunikaciju
+JWT sigurnost, tj. svaka WebSocket konekcija i API poziv autoriziran je putem JWT tokena za sigurnu komunikaciju
 

@@ -1,4 +1,4 @@
-// import React from 'react';
+import React from 'react';
 
 const NetworkInspector = ({ servers, currentServerIndex, messagesByRoom, selectedRoom, onClose }) => {
   const roomId = selectedRoom?.id;
@@ -10,7 +10,6 @@ const NetworkInspector = ({ servers, currentServerIndex, messagesByRoom, selecte
     }
   });
   const last = msgs.slice(-10).reverse();
-// Komentar za change za Source Control 
   return (
     <div className="overlay-backdrop">
       <div className="overlay-window">

@@ -8,7 +8,6 @@ async function request(path, options = {}) {
   if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
   return res.json();
 }
-// Komentar za change za Source Control 
 export async function health() {
   return request('/health');
 }

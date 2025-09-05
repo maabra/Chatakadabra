@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from typing import Dict, List, Set
 import asyncio
 import time
+import jwt
 from .models import Room, RoomCreate, MessageIn, MessageOut, LoginIn, LoginOut
 
 app = FastAPI(title="Chatakadabra API", version="0.0.1")
@@ -15,8 +16,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-
-# Komentar za change za Source Control 
 # Privremeni "DB"
 rooms: List[Room] = [
     Room(id=1, name="General Chat"),
@@ -74,18 +73,21 @@ async def send_message(room_id: int, payload: MessageIn):
         timestamp=time.time(),
     )
     messages_by_room[room_id].append(msg)
-    # Broadcast poruku svim WS pretplatnicima sobe
     await _broadcast(room_id, msg)
     return msg
 
 
-@app.post("/login", response_model=LoginOut)
+@app.post("/login")
 async def login(payload: LoginIn):
     global next_user_id
     uid = next_user_id
     next_user_id += 1
     users[uid] = payload.username
-    return {"id": uid, "username": payload.username}
+    payload_data = {
+        "sub": uid,
+    }
+    token = jwt.encode(payload_data, algorithm='HS256')
+    return {"id": uid, "username": payload.username, "token": token}
 
 
 @app.websocket("/ws/rooms/{room_id}")
@@ -94,9 +96,7 @@ async def ws_room(websocket: WebSocket, room_id: int):
     subs = room_subscribers.setdefault(room_id, set())
     subs.add(websocket)
     try:
-        # Održavaj vezu otvorenom dok klijent ne prekine
         while True:
-            # Ne očekujemo poruke od klijenta; blokiramo na primanju
             await websocket.receive_text()
     finally:
         subs.discard(websocket)

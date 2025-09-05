@@ -12,7 +12,7 @@ const ChatList = ({ rooms, onRoomSelect, onAddRoom, selectedRoom, serverInfo }) 
       setShowAddForm(false);
     }
   };
-// Komentar za change za Source Control 
+
   return (
     <div className="chat-list-panel">
       <div className="panel-header">

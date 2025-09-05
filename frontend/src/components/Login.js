@@ -9,7 +9,6 @@ const Login = ({ onLogin }) => {
       onLogin(username.trim());
     }
   };
-// Komentar za change za Source Control 
   return (
     <div className="login-container">
       <div className="login-window">
