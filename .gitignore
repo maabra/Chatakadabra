@@ -29956,3 +29956,7 @@ frontend/node_modules/regenerate-unicode-properties/Binary_Property/Cased.js
 frontend/node_modules/regenerate-unicode-properties/Binary_Property/Changes_When_Casefolded.js
 frontend/node_modules/regenerate-unicode-properties/Binary_Property/Changes_When_Casemapped.js
 frontend/node_modules/regenerate-unicode-properties/Binary_Property/Changes_When_Lowercased.js
+backend/__pycache__/main.cpython-311.pyc
+backend/__pycache__/models.cpython-311.pyc
+backend/__pycache__/main.cpython-311.pyc
+backend/__pycache__/main.cpython-311.pyc

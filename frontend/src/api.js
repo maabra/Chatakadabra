@@ -17,7 +17,7 @@ export async function getRooms() {
 }
 
 export async function createRoom(name) {
-  return request(`/rooms?name=${encodeURIComponent(name)}`, { method: 'POST' });
+  return request('/rooms', { method: 'POST', body: JSON.stringify({ name }) });
 }
 
 export async function getMessages(roomId) {
@@ -31,4 +31,15 @@ export async function sendMessage(roomId, text, user) {
   });
 }
 
-export const api = { BASE_URL, health, getRooms, createRoom, getMessages, sendMessage };
+// Login (POST /login { username })
+export async function login(username) {
+  return request('/login', { method: 'POST', body: JSON.stringify({ username }) });
+}
+
+// WebSocket otvaranje za sobu
+export function openRoomSocket(roomId) {
+  const wsBase = BASE_URL.replace(/^http/, 'ws');
+  return new WebSocket(`${wsBase}/ws/rooms/${roomId}`);
+}
+
+export const api = { BASE_URL, health, getRooms, createRoom, getMessages, sendMessage, login, openRoomSocket };

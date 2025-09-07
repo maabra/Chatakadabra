@@ -8,6 +8,7 @@ import { api } from './api';
 
 // frontend: npm start
 // backend: uvicorn main:app --reload --host 0.0.0.0 --port 8000
+// docker compose up --build
 
 function App() {
   const [currentUser, setCurrentUser] = useState(null);
@@ -80,10 +81,24 @@ function App() {
 
   // Prijava JWT
   const handleLogin = async (username) => {
+    if (!api.login) {
+      console.warn('api.login nije definiran. Dostupni ključevi api objekta:', Object.keys(api));
+      // Fallback, tj. ide direktan fetch prema backendu
+      const resp = await fetch(`${api.BASE_URL}/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: username.trim() })
+      });
+      if (!resp.ok) throw new Error('Login fallback failed');
+      const data = await resp.json();
+      setCurrentUser({ id: data.id, username: data.username });
+      setCurrentServerIndex(pickServerIndex(data.id));
+      setJwtToken(data.token);
+      return;
+    }
     const userResp = await api.login(username.trim());
     setCurrentUser({ id: userResp.id, username: userResp.username });
     setCurrentServerIndex(pickServerIndex(userResp.id));
-    // Spremi JWT
     setJwtToken(userResp.token);
   };
 
@@ -162,11 +177,11 @@ function App() {
         const text = spoofTexts[Math.floor(Math.random() * spoofUsers.length) % spoofTexts.length];
         ops.push(api.sendMessage(roomId, text, user));
       }
-      const results = await Promise.all(ops);
+      await Promise.all(ops);
     })();
   }
 
-  // Login komponenta, ponekad izbacuje error - još testirati
+  // Login komponenta
   if (!currentUser) {
     return <Login onLogin={handleLogin} />;
   }
@@ -175,7 +190,7 @@ function App() {
   return (
     <div className="app-container">
       <div className="title-bar">
-        <div className="title-bar-text">🪄 Chatakadabra v1.4</div>
+        <div className="title-bar-text">🪄 Chatakadabra v1.5</div>
         <div className="title-bar-controls">
           <button className="title-bar-control" title="Network Inspector" onClick={() => setInspectorOpen(true)}>i</button>
           <button className="title-bar-control" onClick={() => setCurrentUser(null)}>×</button>

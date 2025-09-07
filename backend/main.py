@@ -4,7 +4,8 @@ from typing import Dict, List, Set
 import asyncio
 import time
 import jwt
-from .models import Room, RoomCreate, MessageIn, MessageOut, LoginIn, LoginOut
+
+from models import Room, RoomCreate, MessageIn, MessageOut, LoginIn
 
 app = FastAPI(title="Chatakadabra API", version="0.0.1")
 
@@ -77,16 +78,18 @@ async def send_message(room_id: int, payload: MessageIn):
     return msg
 
 
+SECRET = "dev-insecure-secret"  # placeholder
+
+
 @app.post("/login")
 async def login(payload: LoginIn):
     global next_user_id
     uid = next_user_id
     next_user_id += 1
     users[uid] = payload.username
-    payload_data = {
-        "sub": uid,
-    }
-    token = jwt.encode(payload_data, algorithm='HS256')
+    payload_data = {"sub": uid}
+    # secret
+    token = jwt.encode(payload_data, SECRET, algorithm='HS256')
     return {"id": uid, "username": payload.username, "token": token}
 
 
