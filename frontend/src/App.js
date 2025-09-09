@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import './App.css';
 import Login from './components/Login.js';
 import ChatList from './components/ChatList';
@@ -46,6 +46,18 @@ function App() {
   const [rooms, setRooms] = useState([]);
   const [messagesByRoom, setMessagesByRoom] = useState({});
   const [apiReady, setApiReady] = useState(false);
+  const seenIdsRef = useRef(new Map());
+  const markSeen = (roomId, id) => {
+    const key = typeof roomId === 'string' ? parseInt(roomId, 10) : roomId;
+    let set = seenIdsRef.current.get(key);
+    if (!set) {
+      set = new Set();
+      seenIdsRef.current.set(key, set);
+    }
+    const exists = set.has(id);
+    if (!exists) set.add(id);
+    return !exists; // Testiranje dupliciranja
+  };
 
   // Hashiranje - test
   const hashString = (s) => { let h = 0; for (let i = 0; i < s.length; i++) h = ((h << 5) - h) + s.charCodeAt(i); return Math.abs(h); };
@@ -112,16 +124,24 @@ function App() {
     (async () => {
       const msgs = await api.getMessages(room.id);
       const normalized = msgs.map(normalizeFromApi);
+      normalized.forEach(m => markSeen(room.id, m.id));
       setMessagesByRoom(prev => ({ ...prev, [room.id]: normalized }));
       const ws = api.openRoomSocket(room.id);
       ws.onmessage = (evt) => {
         try {
           const data = JSON.parse(evt.data);
+          if (!data || typeof data !== 'object' || data.roomId == null) return;
+          const targetRoomId = typeof data.roomId === 'string' ? parseInt(data.roomId, 10) : data.roomId;
           const normalized = normalizeFromApi(data);
-          setMessagesByRoom(prev => ({
-            ...prev,
-            [room.id]: [...(prev[room.id] || []), normalized]
-          }));
+          if (!markSeen(targetRoomId, normalized.id)) return;
+          setMessagesByRoom(prev => {
+            const list = prev[targetRoomId] || [];
+            if (list.some(m => m.id === normalized.id)) return prev;
+            return {
+              ...prev,
+              [targetRoomId]: [...list, normalized]
+            };
+          });
         } catch {
         }
       };
@@ -155,12 +175,8 @@ function App() {
   const handleSendMessage = (roomId, text, username) => {
     (async () => {
       try {
-      const saved = await api.sendMessage(roomId, text, username);
-      const normalized = normalizeFromApi(saved);
-      setMessagesByRoom((prev) => ({
-        ...prev,
-        [roomId]: [...(prev[roomId] || []), normalized]
-      }));
+  // WebSocket?
+  await api.sendMessage(roomId, text, username);
       } catch {
       }
     })();
@@ -190,7 +206,7 @@ function App() {
   return (
     <div className="app-container">
       <div className="title-bar">
-        <div className="title-bar-text">🪄 Chatakadabra v1.5</div>
+        <div className="title-bar-text">🪄 Chatakadabra v1.7</div>
         <div className="title-bar-controls">
           <button className="title-bar-control" title="Network Inspector" onClick={() => setInspectorOpen(true)}>i</button>
           <button className="title-bar-control" onClick={() => setCurrentUser(null)}>×</button>

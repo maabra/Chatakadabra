@@ -1,3 +1,4 @@
+backend/__pycache__
 frontend/node_modules
 frontend/node_modules/.package-lock.json
 frontend/node_modules/.bin/acorn
@@ -29958,5 +29959,6 @@ frontend/node_modules/regenerate-unicode-properties/Binary_Property/Changes_When
 frontend/node_modules/regenerate-unicode-properties/Binary_Property/Changes_When_Lowercased.js
 backend/__pycache__/main.cpython-311.pyc
 backend/__pycache__/models.cpython-311.pyc
+backend/__pycache__/main.cpython-311.pyc
 backend/__pycache__/main.cpython-311.pyc
 backend/__pycache__/main.cpython-311.pyc

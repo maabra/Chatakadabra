@@ -8,6 +8,8 @@ import os
 import boto3
 from botocore.exceptions import ClientError, NoCredentialsError
 from boto3.dynamodb.conditions import Key
+from starlette.websockets import WebSocketState
+from decimal import Decimal
 
 from models import Room, RoomCreate, MessageIn, MessageOut, LoginIn
 
@@ -112,8 +114,7 @@ async def create_room(payload: RoomCreate):
 
 @app.get("/rooms/{room_id}/messages", response_model=List[MessageOut])
 async def get_messages(room_id: int):
-    if room_id not in messages_by_room:
-        raise HTTPException(status_code=404, detail="Room not found")
+    messages_by_room.setdefault(room_id, [])
     if not messages_by_room[room_id]:
         table = dynamodb.Table(MESSAGES_TABLE)
         resp = table.query(KeyConditionExpression=Key('roomId').eq(room_id))
@@ -133,18 +134,27 @@ async def _broadcast(room_id: int, msg: MessageOut):
     subs = room_subscribers.get(room_id)
     if not subs:
         return
+    stale = []
     for ws in list(subs):
+        # Zakrpa skippanja
+        if getattr(ws, "client_state", None) != WebSocketState.CONNECTED:
+            stale.append(ws)
+            continue
         await ws.send_json(msg.dict())
+    for ws in stale:
+        subs.discard(ws)
 
 @app.post("/rooms/{room_id}/messages", response_model=MessageOut)
 async def send_message(room_id: int, payload: MessageIn):
-    if room_id not in messages_by_room:
-        raise HTTPException(status_code=404, detail="Room not found")
+    messages_by_room.setdefault(room_id, [])
+    # Standardizacija oepet
+    text = (payload.text or "").strip() or "..."
+    user = payload.user or "Anon"
     msg = MessageOut(
         id=int(time.time() * 1000),
         roomId=room_id,
-        text=payload.text.strip(),
-        user=payload.user,
+        text=text,
+        user=user,
         timestamp=time.time(),
     )
     messages_by_room[room_id].append(msg)
@@ -153,7 +163,7 @@ async def send_message(room_id: int, payload: MessageIn):
         "id": msg.id,
         "text": msg.text,
         "user": msg.user,
-        "timestamp": msg.timestamp,
+    "timestamp": Decimal(str(msg.timestamp)),
     })
     await _broadcast(room_id, msg)
     return msg
