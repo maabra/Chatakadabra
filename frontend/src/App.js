@@ -25,24 +25,6 @@ function App() {
   const pickServerIndex = (userId) => userId % servers.length;
   const [inspectorOpen, setInspectorOpen] = useState(false);
 
-  // const initialRooms = [
-  //   { id: 1, name: 'General Chat', users: 12 },
-  //   { id: 2, name: 'Test 1', users: 8 },
-  //   { id: 3, name: 'Test 2', users: 15 }
-  // ];
-  // const [rooms, setRooms] = useState(initialRooms);
-  // const seedMessages = (roomName) => {
-  //   const now = Date.now();
-  //   const byRoom = { 'General Chat': 'Bob', 'Test 2': 'Alice', 'Test 1': 'Charlie' };
-  //   const user = byRoom[roomName] || 'Alice';
-  //   return [
-  //     { id: now, type: 'text', user: 'message:', text: `Welcome to ${roomName}!`, timestamp: new Date(), isSystem: true },
-  //     { id: now + 1, type: 'text', user, text: '1', timestamp: new Date() }
-  //   ];
-  // };
-  // const buildInitialMessages = (rs) => rs.reduce((acc, r) => { acc[r.id] = seedMessages(r.name); return acc; }, {});
-  // const [messagesByRoom, setMessagesByRoom] = useState(buildInitialMessages(initialRooms));
-
   const [rooms, setRooms] = useState([]);
   const [messagesByRoom, setMessagesByRoom] = useState({});
   const [apiReady, setApiReady] = useState(false);
@@ -75,10 +57,11 @@ function App() {
     let mounted = true;
     (async () => {
       try {
-      await api.health();
+  await api.health();
       if (!mounted) return;
       setApiReady(true);
-      const serverRooms = await api.getRooms();
+  const base = api.DEFAULT_BASE;
+  const serverRooms = await api.getRooms(base);
       if (!mounted) return;
       setRooms(serverRooms.map(r => ({ id: r.id, name: r.name, users: 0 })));
       } catch (e) {
@@ -101,14 +84,15 @@ function App() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username: username.trim() })
       });
-      if (!resp.ok) throw new Error('Login fallback failed');
+      if (!resp.ok) throw new Error('Login fallback greška');
       const data = await resp.json();
       setCurrentUser({ id: data.id, username: data.username });
       setCurrentServerIndex(pickServerIndex(data.id));
       setJwtToken(data.token);
       return;
     }
-    const userResp = await api.login(username.trim());
+  const base = api.pickBackendByKey(username.trim());
+  const userResp = await api.login(username.trim(), base);
     setCurrentUser({ id: userResp.id, username: userResp.username });
     setCurrentServerIndex(pickServerIndex(userResp.id));
     setJwtToken(userResp.token);
@@ -122,11 +106,13 @@ function App() {
       setRoomSocket(null);
     }
     (async () => {
+      const base = api.pickBackendByKey(room.id);
       const msgs = await api.getMessages(room.id);
+      
       const normalized = msgs.map(normalizeFromApi);
       normalized.forEach(m => markSeen(room.id, m.id));
       setMessagesByRoom(prev => ({ ...prev, [room.id]: normalized }));
-      const ws = api.openRoomSocket(room.id);
+      const ws = api.openRoomSocket(room.id, base);
       ws.onmessage = (evt) => {
         try {
           const data = JSON.parse(evt.data);
@@ -163,7 +149,8 @@ function App() {
   const handleAddRoom = (roomName) => {
     (async () => {
       try {
-      const created = await api.createRoom(roomName);
+  const base = api.pickBackendByKey(roomName);
+  const created = await api.createRoom(roomName, base);
       setRooms(prev => [...prev, { id: created.id, name: created.name, users: 0 }]);
       setMessagesByRoom(prev => ({ ...prev, [created.id]: [] }));
       } catch {
@@ -176,7 +163,8 @@ function App() {
     (async () => {
       try {
   // WebSocket?
-  await api.sendMessage(roomId, text, username);
+  const base = api.pickBackendByKey(roomId);
+  await api.sendMessage(roomId, text, username, base);
       } catch {
       }
     })();
@@ -191,7 +179,8 @@ function App() {
       for (let i = 0; i < count; i++) {
         const user = spoofUsers[Math.floor(Math.random() * spoofUsers.length)];
         const text = spoofTexts[Math.floor(Math.random() * spoofUsers.length) % spoofTexts.length];
-        ops.push(api.sendMessage(roomId, text, user));
+  const base = api.pickBackendByKey(roomId);
+  ops.push(api.sendMessage(roomId, text, user, base));
       }
       await Promise.all(ops);
     })();

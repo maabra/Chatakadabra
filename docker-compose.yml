@@ -7,14 +7,18 @@ services:
       - ./frontend:/app
       - /app/node_modules
     command: npm start
+    environment:
+      - REACT_APP_API_BACKENDS=http://localhost:8001,http://localhost:8002,http://localhost:8003
     depends_on:
-      - backend
+      - backend-1
+      - backend-2
+      - backend-3
     restart: unless-stopped
 
-  backend:
+  backend-1:
     build: ./backend
     ports:
-      - "8000:8000"
+      - "8001:8000"
     volumes:
       - ./backend:/app
     environment:
@@ -22,7 +26,39 @@ services:
       - DYNAMO_ENDPOINT=http://dynamodb-local:8000
       - AWS_ACCESS_KEY_ID=dummy
       - AWS_SECRET_ACCESS_KEY=dummy
-      - AWS_REGION=us-east-1
+      - AWS_REGION=eu-central-1
+    depends_on:
+      - dynamodb-local
+    restart: unless-stopped
+
+  backend-2:
+    build: ./backend
+    ports:
+      - "8002:8000"
+    volumes:
+      - ./backend:/app
+    environment:
+      - PYTHONUNBUFFERED=1
+      - DYNAMO_ENDPOINT=http://dynamodb-local:8000
+      - AWS_ACCESS_KEY_ID=dummy
+      - AWS_SECRET_ACCESS_KEY=dummy
+      - AWS_REGION=eu-central-1
+    depends_on:
+      - dynamodb-local
+    restart: unless-stopped
+
+  backend-3:
+    build: ./backend
+    ports:
+      - "8003:8000"
+    volumes:
+      - ./backend:/app
+    environment:
+      - PYTHONUNBUFFERED=1
+      - DYNAMO_ENDPOINT=http://dynamodb-local:8000
+      - AWS_ACCESS_KEY_ID=dummy
+      - AWS_SECRET_ACCESS_KEY=dummy
+      - AWS_REGION=eu-central-1
     depends_on:
       - dynamodb-local
     restart: unless-stopped
@@ -30,6 +66,6 @@ services:
   dynamodb-local:
     image: amazon/dynamodb-local:latest
     ports:
-      - "8001:8000"
+      - "8000:8000"
     command: -jar DynamoDBLocal.jar -sharedDb -inMemory
     restart: unless-stopped
