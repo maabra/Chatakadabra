@@ -3,7 +3,6 @@ import './App.css';
 import Login from './components/Login.js';
 import ChatList from './components/ChatList';
 import ChatRoom from './components/ChatRoom';
-import NetworkInspector from './components/NetworkInspector';
 import { api } from './api';
 
 // frontend: npm start
@@ -13,17 +12,10 @@ import { api } from './api';
 function App() {
   const [currentUser, setCurrentUser] = useState(null);
   const [selectedRoom, setSelectedRoom] = useState(null);
-  const [roomSocket, setRoomSocket] = useState(null);
-  const [jwtToken, setJwtToken] = useState(null);
 
-  const servers = [
-    { id: 'b-1', name: 'backend-1', role: 'api' },
-    { id: 'b-2', name: 'backend-2', role: 'api' },
-    { id: 'b-3', name: 'backend-3', role: 'api' }
-  ];
+  const servers = [];
   const [currentServerIndex, setCurrentServerIndex] = useState(0);
-  const pickServerIndex = (userId) => userId % servers.length;
-  const [inspectorOpen, setInspectorOpen] = useState(false);
+  const pickServerIndex = () => 0;
 
   const [rooms, setRooms] = useState([]);
   const [messagesByRoom, setMessagesByRoom] = useState({});
@@ -38,152 +30,122 @@ function App() {
     }
     const exists = set.has(id);
     if (!exists) set.add(id);
-    return !exists; // Testiranje dupliciranja
+    return !exists;
   };
-
-  // Hashiranje - test
-  const hashString = (s) => { let h = 0; for (let i = 0; i < s.length; i++) h = ((h << 5) - h) + s.charCodeAt(i); return Math.abs(h); };
-  const pickServerIndexForUsername = (username) => hashString(username) % servers.length;
 
   // Standardizacija poruke
   const normalizeFromApi = (m) => {
-    const idx = pickServerIndexForUsername(m.user || 'unknown');
     const ts = typeof m.timestamp === 'number' ? new Date(m.timestamp * 1000) : new Date(m.timestamp);
-    return { ...m, timestamp: ts, servedBy: servers[idx].name, serverIndex: idx };
+    return { ...m, timestamp: ts };
   };
 
   // Loading
   useEffect(() => {
     let mounted = true;
-    (async () => {
+  (async () => {
       try {
-  await api.health();
-      if (!mounted) return;
-      setApiReady(true);
-  const base = api.DEFAULT_BASE;
+  const base = api.BACKENDS[0] || 'http://localhost:8001';
   const serverRooms = await api.getRooms(base);
-      if (!mounted) return;
-      setRooms(serverRooms.map(r => ({ id: r.id, name: r.name, users: 0 })));
+        if (!mounted) return;
+        setApiReady(true);
+        setRooms(serverRooms.map(r => ({ id: r.id, name: r.name, users: 0 })));
       } catch (e) {
         if (!mounted) return;
         setApiReady(false);
         setRooms([]);
         setMessagesByRoom({});
       }
-    })();
+  })();
     return () => { mounted = false; };
   }, []);
 
-  // Prijava JWT
+  // Običan login
   const handleLogin = async (username) => {
-    if (!api.login) {
-      console.warn('api.login nije definiran. Dostupni ključevi api objekta:', Object.keys(api));
-      // Fallback, tj. ide direktan fetch prema backendu
-      const resp = await fetch(`${api.BASE_URL}/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username: username.trim() })
-      });
-      if (!resp.ok) throw new Error('Login fallback greška');
-      const data = await resp.json();
-      setCurrentUser({ id: data.id, username: data.username });
-      setCurrentServerIndex(pickServerIndex(data.id));
-      setJwtToken(data.token);
-      return;
-    }
-  const base = api.pickBackendByKey(username.trim());
-  const userResp = await api.login(username.trim(), base);
+    const base = api.pickBackendByKey(username.trim());
+    const userResp = await api.login(username.trim(), base);
     setCurrentUser({ id: userResp.id, username: userResp.username });
     setCurrentServerIndex(pickServerIndex(userResp.id));
-    setJwtToken(userResp.token);
   };
 
   // Odabir room-a
   const handleRoomSelect = (room) => {
     setSelectedRoom(room);
-    if (roomSocket) {
-      try { roomSocket.close(); } catch {}
-      setRoomSocket(null);
-    }
-    (async () => {
-      const base = api.pickBackendByKey(room.id);
-      const msgs = await api.getMessages(room.id);
-      
-      const normalized = msgs.map(normalizeFromApi);
-      normalized.forEach(m => markSeen(room.id, m.id));
-      setMessagesByRoom(prev => ({ ...prev, [room.id]: normalized }));
-      const ws = api.openRoomSocket(room.id, base);
-      ws.onmessage = (evt) => {
-        try {
-          const data = JSON.parse(evt.data);
-          if (!data || typeof data !== 'object' || data.roomId == null) return;
-          const targetRoomId = typeof data.roomId === 'string' ? parseInt(data.roomId, 10) : data.roomId;
-          const normalized = normalizeFromApi(data);
-          if (!markSeen(targetRoomId, normalized.id)) return;
-          setMessagesByRoom(prev => {
-            const list = prev[targetRoomId] || [];
-            if (list.some(m => m.id === normalized.id)) return prev;
-            return {
-              ...prev,
-              [targetRoomId]: [...list, normalized]
-            };
-          });
-        } catch {
-        }
-      };
-      ws.onclose = () => {
-      };
-      setRoomSocket(ws);
-    })();
+  (async () => {
+      try {
+        const msgs = await api.getMessages(room.id);
+        console.debug('[room fetch]', room.id, msgs);
+        const normalized = msgs.map(normalizeFromApi);
+        normalized.forEach(m => markSeen(room.id, m.id));
+        setMessagesByRoom(prev => ({ ...prev, [room.id]: normalized }));
+      } catch (e) {
+        console.error('Failed to load messages for room', room.id, e);
+        setMessagesByRoom(prev => ({ ...prev, [room.id]: [] }));
+      }
+  })();
   };
 
-  useEffect(() => {
-    return () => {
-      if (roomSocket) {
-        try { roomSocket.close(); } catch {}
-      }
-    };
-  }, [roomSocket]);
-
-// Dodavanje room-a
+  // Dodavanje room-a
   const handleAddRoom = (roomName) => {
-    (async () => {
+  (async () => {
       try {
-  const base = api.pickBackendByKey(roomName);
-  const created = await api.createRoom(roomName, base);
-      setRooms(prev => [...prev, { id: created.id, name: created.name, users: 0 }]);
-      setMessagesByRoom(prev => ({ ...prev, [created.id]: [] }));
+        const base = api.pickBackendByKey(roomName);
+        const created = await api.createRoom(roomName, base);
+        setRooms(prev => [...prev, { id: created.id, name: created.name, users: 0 }]);
+        setMessagesByRoom(prev => ({ ...prev, [created.id]: [] }));
       } catch {
       }
-    })();
+  })();
   };
 
   // Slanje poruke
   const handleSendMessage = (roomId, text, username) => {
-    (async () => {
+  (async () => {
       try {
-  // WebSocket?
-  const base = api.pickBackendByKey(roomId);
-  await api.sendMessage(roomId, text, username, base);
+        const base = api.pickBackendByKey(roomId);
+        const created = await api.sendMessage(roomId, text, username, base);
+        const normalized = normalizeFromApi(created);
+        if (markSeen(roomId, normalized.id)) {
+          setMessagesByRoom(prev => {
+            const list = prev[roomId] || [];
+            if (list.some(m => m.id === normalized.id)) return prev;
+            return { ...prev, [roomId]: [...list, normalized] };
+          });
+        }
       } catch {
       }
-    })();
+  })();
   };
 
   // Spam generator
   const spoofUsers = ['Alice','Bob','Marko','Danijela','Eve','Frank','Petra','Heidi'];
   const spoofTexts = ['Wow!','hi!','Nice','hello!','Hi','Hi!','Cool!','Test','ok','yo'];
   function handleSpam(roomId, count = 10) {
-    (async () => {
+  (async () => {
       const ops = [];
       for (let i = 0; i < count; i++) {
         const user = spoofUsers[Math.floor(Math.random() * spoofUsers.length)];
         const text = spoofTexts[Math.floor(Math.random() * spoofUsers.length) % spoofTexts.length];
-  const base = api.pickBackendByKey(roomId);
-  ops.push(api.sendMessage(roomId, text, user, base));
+        const base = api.pickBackendByKey(roomId);
+        ops.push(api.sendMessage(roomId, text, user, base));
       }
-      await Promise.all(ops);
-    })();
+      try {
+        const results = await Promise.all(ops);
+        const appended = [];
+        results.forEach(msg => {
+          const norm = normalizeFromApi(msg);
+            if (markSeen(roomId, norm.id)) appended.push(norm);
+        });
+        if (appended.length) {
+          setMessagesByRoom(prev => {
+            const list = prev[roomId] || [];
+            const existingIds = new Set(list.map(m => m.id));
+            const merged = [...list, ...appended.filter(m => !existingIds.has(m.id))];
+            return { ...prev, [roomId]: merged };
+          });
+        }
+      } catch (e) {
+      }
+  })();
   }
 
   // Login komponenta
@@ -195,9 +157,8 @@ function App() {
   return (
     <div className="app-container">
       <div className="title-bar">
-        <div className="title-bar-text">🪄 Chatakadabra v1.7</div>
+        <div className="title-bar-text">🪄 Chatakadabra v1.9</div>
         <div className="title-bar-controls">
-          <button className="title-bar-control" title="Network Inspector" onClick={() => setInspectorOpen(true)}>i</button>
           <button className="title-bar-control" onClick={() => setCurrentUser(null)}>×</button>
         </div>
       </div>
@@ -206,11 +167,10 @@ function App() {
           <div className="status-field">User: {currentUser.username}</div>
           <div className="status-field">Connected: {apiReady ? 'API' : 'API DOWN'}</div>
           <div className="status-field">Rooms: {rooms.length}</div>
-          {jwtToken && <div className="status-field">JWT: {jwtToken.slice(0, 16)}...</div>}
         </div>
         <div className="main-content">
           <div className="sidebar">
-            <ChatList rooms={rooms} onRoomSelect={handleRoomSelect} onAddRoom={handleAddRoom} selectedRoom={selectedRoom} serverInfo={{ current: servers[currentServerIndex], index: currentServerIndex, total: servers.length }} />
+            <ChatList rooms={rooms} onRoomSelect={handleRoomSelect} onAddRoom={handleAddRoom} selectedRoom={selectedRoom} />
           </div>
           <div className="chat-area">
             {selectedRoom ? (
@@ -225,7 +185,7 @@ function App() {
                   </div>
                   <div className="info-box">
                     <p>RS project, wow!</p>
-                    <p>Cool texts!</p>
+                    <p>Cool chats!</p>
                     <p>Fancy UI!</p>
                   </div>
                 </div>
@@ -234,9 +194,6 @@ function App() {
           </div>
         </div>
       </div>
-      {inspectorOpen && (
-        <NetworkInspector servers={servers} currentServerIndex={currentServerIndex} messagesByRoom={messagesByRoom} selectedRoom={selectedRoom} onClose={() => setInspectorOpen(false)} />
-      )}
     </div>
   );
 }

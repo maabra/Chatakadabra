@@ -45,9 +45,7 @@ const ChatRoom = ({ room, currentUser, messages, onSend, onSpam }) => {
             >
               <div className="message-header">
                 <span className="message-user">{message.isSystem ? 'SYSTEM' : 'USER'} {message.user}</span>
-                <span className="message-time">
-                  {formatTime(message.timestamp)}{message.serverIndex !== undefined ? ` · ${message.servedBy}` : ''}
-                </span>
+                <span className="message-time">{formatTime(message.timestamp)}</span>
               </div>
               <div className="message-text">{message.text}</div>
             </div>

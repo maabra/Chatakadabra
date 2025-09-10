@@ -1,14 +1,12 @@
-from fastapi import FastAPI, HTTPException, WebSocket
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from typing import Dict, List, Set
 import asyncio
 import time
-import jwt
 import os
 import boto3
 from botocore.exceptions import ClientError, NoCredentialsError
 from boto3.dynamodb.conditions import Key
-from starlette.websockets import WebSocketState
 from decimal import Decimal
 
 from models import Room, RoomCreate, MessageIn, MessageOut, LoginIn
@@ -26,7 +24,6 @@ app.add_middleware(
 # In-memory cache (ako je empty pri startu, DynamoDB ne funkcionira)
 rooms: List[Room] = []
 messages_by_room: Dict[int, List[MessageOut]] = {}
-room_subscribers: Dict[int, Set[WebSocket]] = {}
 users: Dict[int, str] = {}
 next_user_id: int = 1
 
@@ -95,9 +92,6 @@ ensure_tables()
 seed_rooms_if_empty()
 load_rooms_cache()
 
-@app.get("/health")
-async def health():
-    return {"ok": True}
 
 @app.get("/rooms", response_model=List[Room])
 async def list_rooms():
@@ -130,20 +124,6 @@ async def get_messages(room_id: int):
         messages_by_room[room_id].extend(loaded)
     return messages_by_room[room_id]
 
-async def _broadcast(room_id: int, msg: MessageOut):
-    subs = room_subscribers.get(room_id)
-    if not subs:
-        return
-    stale = []
-    for ws in list(subs):
-        # Zakrpa skippanja
-        if getattr(ws, "client_state", None) != WebSocketState.CONNECTED:
-            stale.append(ws)
-            continue
-        await ws.send_json(msg.dict())
-    for ws in stale:
-        subs.discard(ws)
-
 @app.post("/rooms/{room_id}/messages", response_model=MessageOut)
 async def send_message(room_id: int, payload: MessageIn):
     messages_by_room.setdefault(room_id, [])
@@ -165,10 +145,7 @@ async def send_message(room_id: int, payload: MessageIn):
         "user": msg.user,
     "timestamp": Decimal(str(msg.timestamp)),
     })
-    await _broadcast(room_id, msg)
     return msg
-
-SECRET = "dev-insecure-secret"  # Placeholder za pravi secret kod
 
 @app.post("/login")
 async def login(payload: LoginIn):
@@ -176,17 +153,5 @@ async def login(payload: LoginIn):
     uid = next_user_id
     next_user_id += 1
     users[uid] = payload.username
-    payload_data = {"sub": uid}
-    token = jwt.encode(payload_data, SECRET, algorithm='HS256')
-    return {"id": uid, "username": payload.username, "token": token}
+    return {"id": uid, "username": payload.username}
 
-@app.websocket("/ws/rooms/{room_id}")
-async def ws_room(websocket: WebSocket, room_id: int):
-    await websocket.accept()
-    subs = room_subscribers.setdefault(room_id, set())
-    subs.add(websocket)
-    try:
-        while True:
-            await websocket.receive_text()
-    finally:
-        subs.discard(websocket)
