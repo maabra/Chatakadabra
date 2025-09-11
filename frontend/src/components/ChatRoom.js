@@ -31,11 +31,10 @@ const ChatRoom = ({ room, currentUser, messages, onSend, onSpam }) => {
       <div className="chat-header">
         <h3>{room.name}</h3>
         <div className="room-info">
-          <span>{room.users} users online</span>
-          <span>Connected to room</span>
+          {/* <span>{room.users} users online</span>
+          <span>Connected to room</span> */}
         </div>
       </div>
-
       <div className="messages-container">
         <div className="messages-list">
           {messages.map(message => (

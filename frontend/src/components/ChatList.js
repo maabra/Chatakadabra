@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 
-const ChatList = ({ rooms, onRoomSelect, onAddRoom, selectedRoom, serverInfo }) => {
+const ChatList = ({ rooms, onRoomSelect, onAddRoom, selectedRoom}) => {
   const [newRoomName, setNewRoomName] = useState('');
   const [showAddForm, setShowAddForm] = useState(false);
 
@@ -49,19 +49,19 @@ const ChatList = ({ rooms, onRoomSelect, onAddRoom, selectedRoom, serverInfo }) 
             onClick={() => onRoomSelect(room)}
           >
             <div className="room-name">{room.name}</div>
-            <div className="room-users">{room.users} users</div>
+            {/* <div className="room-users">{room.users} users</div> */}
           </div>
         ))}
       </div>
 
-      <div className="panel-footer">
-        <div className="room-count">{rooms.length} rooms available</div>
-        {/* {serverInfo?.current && (
+      {/*<div className="panel-footer">
+        <div className="room-count">{rooms.length} rooms available.</div>
+        { {serverInfo?.current && (
           <div className="server-info">
             Backend: {serverInfo.current.name} ({serverInfo.index + 1}/{serverInfo.total})
           </div>
-        )} */}
-      </div>
+        )} }
+      </div>*/}
     </div>
   );
 };

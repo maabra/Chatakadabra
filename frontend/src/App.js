@@ -12,14 +12,9 @@ import { api } from './api';
 function App() {
   const [currentUser, setCurrentUser] = useState(null);
   const [selectedRoom, setSelectedRoom] = useState(null);
-
-  const servers = [];
-  const [currentServerIndex, setCurrentServerIndex] = useState(0);
-  const pickServerIndex = () => 0;
-
   const [rooms, setRooms] = useState([]);
   const [messagesByRoom, setMessagesByRoom] = useState({});
-  const [apiReady, setApiReady] = useState(false);
+  {/*const [apiReady, setApiReady] = useState(false);*/}
   const seenIdsRef = useRef(new Map());
   const markSeen = (roomId, id) => {
     const key = typeof roomId === 'string' ? parseInt(roomId, 10) : roomId;
@@ -59,12 +54,11 @@ function App() {
     return () => { mounted = false; };
   }, []);
 
-  // Običan login
+  // Login
   const handleLogin = async (username) => {
     const base = api.pickBackendByKey(username.trim());
     const userResp = await api.login(username.trim(), base);
     setCurrentUser({ id: userResp.id, username: userResp.username });
-    setCurrentServerIndex(pickServerIndex(userResp.id));
   };
 
   // Odabir room-a
@@ -72,7 +66,8 @@ function App() {
     setSelectedRoom(room);
   (async () => {
       try {
-        const msgs = await api.getMessages(room.id);
+  const base = api.pickBackendByKey(room.id);
+  const msgs = await api.getMessages(room.id, base);
         console.debug('[room fetch]', room.id, msgs);
         const normalized = msgs.map(normalizeFromApi);
         normalized.forEach(m => markSeen(room.id, m.id));
@@ -148,7 +143,6 @@ function App() {
   })();
   }
 
-  // Login komponenta
   if (!currentUser) {
     return <Login onLogin={handleLogin} />;
   }
@@ -157,7 +151,7 @@ function App() {
   return (
     <div className="app-container">
       <div className="title-bar">
-        <div className="title-bar-text">🪄 Chatakadabra v1.9</div>
+        <div className="title-bar-text">🪄 Chatakadabra v1.10</div>
         <div className="title-bar-controls">
           <button className="title-bar-control" onClick={() => setCurrentUser(null)}>×</button>
         </div>
@@ -165,7 +159,7 @@ function App() {
       <div className="window-body">
         <div className="status-bar">
           <div className="status-field">User: {currentUser.username}</div>
-          <div className="status-field">Connected: {apiReady ? 'API' : 'API DOWN'}</div>
+          {/*<div className="status-field">Connected: {apiReady ? 'API' : 'API DOWN'}</div>*/}
           <div className="status-field">Rooms: {rooms.length}</div>
         </div>
         <div className="main-content">
@@ -181,7 +175,7 @@ function App() {
                   <h2>Hello!</h2>
                   <p>Select chat on left side</p>
                   <div style={{ margin: '12px 0', display: 'flex', justifyContent: 'center' }}>
-                    <img src={process.env.PUBLIC_URL + '/images/speechbubble.gif'} alt="Cube spinning gif" style={{ width: '96px', height: '96px', imageRendering: 'pixelated' }} />
+                    <img src={process.env.PUBLIC_URL + '/images/speechbubble.gif'} alt="Speech bubble gif" style={{ width: '96px', height: '96px', imageRendering: 'pixelated' }} />
                   </div>
                   <div className="info-box">
                     <p>RS project, wow!</p>

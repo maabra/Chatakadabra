@@ -111,7 +111,8 @@ async def get_messages(room_id: int):
     messages_by_room.setdefault(room_id, [])
     if not messages_by_room[room_id]:
         table = dynamodb.Table(MESSAGES_TABLE)
-        resp = table.query(KeyConditionExpression=Key('roomId').eq(room_id))
+        # Use strongly consistent reads so freshly written messages show up immediately
+        resp = table.query(KeyConditionExpression=Key('roomId').eq(room_id), ConsistentRead=True)
         loaded: List[MessageOut] = []
         for it in resp.get('Items', []):
             loaded.append(MessageOut(
