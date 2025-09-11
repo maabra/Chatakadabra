@@ -14,7 +14,7 @@ function App() {
   const [selectedRoom, setSelectedRoom] = useState(null);
   const [rooms, setRooms] = useState([]);
   const [messagesByRoom, setMessagesByRoom] = useState({});
-  {/*const [apiReady, setApiReady] = useState(false);*/}
+  //const [apiReady, setApiReady] = useState(false);
   const seenIdsRef = useRef(new Map());
   const markSeen = (roomId, id) => {
     const key = typeof roomId === 'string' ? parseInt(roomId, 10) : roomId;
@@ -42,11 +42,11 @@ function App() {
   const base = api.BACKENDS[0] || 'http://localhost:8001';
   const serverRooms = await api.getRooms(base);
         if (!mounted) return;
-        setApiReady(true);
+        // setApiReady(true);
         setRooms(serverRooms.map(r => ({ id: r.id, name: r.name, users: 0 })));
       } catch (e) {
         if (!mounted) return;
-        setApiReady(false);
+        // setApiReady(false);
         setRooms([]);
         setMessagesByRoom({});
       }
