@@ -19,7 +19,7 @@ DynamoDB replikacija, tj. chat podaci se automatski repliciraju
 
 Asinkroni sustav, tj. kritične operacije koriste Python asyncio za neblokiran rad
 
-- FastAPI async endpoint-ovi uz WebSocket implementirani
+- FastAPI async endpoint-ovi
 
 Eventual consistency, tj. DynamoDB osigurava eventual consistency za chat poruke
 
