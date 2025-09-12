@@ -6,7 +6,7 @@ Opis projekta
 
  - postojeće sobe, frontend selekcijom backenda osigurava se da svi klijenti iste sobe završe na istoj instanci, a time sve radi u stvarnom vremenu
 
- - stvaranje soba radi kroz API (POST /rooms), sprema se u DynamoDB, prikaz u frontendu; nova soba dobiva vlastitu povijest
+ - stvaranje soba, slanje poruka, login, biranje sobe radi kroz API, sprema se u DynamoDB, prikaz u frontendu; nova soba dobiva vlastitu povijest
 
  - sve poruke koriste asyncio/aiohttp za asinkronu komunikaciju i odmah se repliciraju kroz DynamoDB
 
