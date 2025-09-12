@@ -39,8 +39,8 @@ function App() {
     let mounted = true;
   (async () => {
       try {
-  const base = api.BACKENDS[0] || 'http://localhost:8001';
-  const serverRooms = await api.getRooms(base);
+        const base = api.BACKENDS[0] || 'http://localhost:8001';
+        const serverRooms = await api.getRooms(base);
         if (!mounted) return;
         // setApiReady(true);
         setRooms(serverRooms.map(r => ({ id: r.id, name: r.name, users: 0 })));
@@ -66,8 +66,8 @@ function App() {
     setSelectedRoom(room);
   (async () => {
       try {
-  const base = api.pickBackendByKey(room.id);
-  const msgs = await api.getMessages(room.id, base);
+        const base = api.pickRandomBackend();
+        const msgs = await api.getMessages(room.id, base);
         console.debug('[room fetch]', room.id, msgs);
         const normalized = msgs.map(normalizeFromApi);
         normalized.forEach(m => markSeen(room.id, m.id));
@@ -83,7 +83,7 @@ function App() {
   const handleAddRoom = (roomName) => {
   (async () => {
       try {
-        const base = api.pickBackendByKey(roomName);
+        const base = api.pickRandomBackend();
         const created = await api.createRoom(roomName, base);
         setRooms(prev => [...prev, { id: created.id, name: created.name, users: 0 }]);
         setMessagesByRoom(prev => ({ ...prev, [created.id]: [] }));
@@ -96,7 +96,7 @@ function App() {
   const handleSendMessage = (roomId, text, username) => {
   (async () => {
       try {
-        const base = api.pickBackendByKey(roomId);
+        const base = api.pickRandomBackend();
         const created = await api.sendMessage(roomId, text, username, base);
         const normalized = normalizeFromApi(created);
         if (markSeen(roomId, normalized.id)) {
@@ -120,7 +120,7 @@ function App() {
       for (let i = 0; i < count; i++) {
         const user = spoofUsers[Math.floor(Math.random() * spoofUsers.length)];
         const text = spoofTexts[Math.floor(Math.random() * spoofUsers.length) % spoofTexts.length];
-        const base = api.pickBackendByKey(roomId);
+        const base = api.pickRandomBackend();
         ops.push(api.sendMessage(roomId, text, user, base));
       }
       try {
@@ -151,7 +151,7 @@ function App() {
   return (
     <div className="app-container">
       <div className="title-bar">
-        <div className="title-bar-text">🪄 Chatakadabra v1.10</div>
+        <div className="title-bar-text">🪄 Chatakadabra v1.11</div>
         <div className="title-bar-controls">
           <button className="title-bar-control" onClick={() => setCurrentUser(null)}>×</button>
         </div>

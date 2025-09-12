@@ -29,7 +29,7 @@ next_user_id: int = 1
 
 # DynamoDB postavke
 DYNAMO_ENDPOINT = os.getenv("DYNAMO_ENDPOINT")  # http://dynamodb-local:8000
-DYNAMO_REGION = os.getenv("AWS_REGION", "us-east-1")
+DYNAMO_REGION = os.getenv("AWS_REGION", "eu-central-1")
 session = boto3.session.Session()
 dynamodb = session.resource("dynamodb", endpoint_url=DYNAMO_ENDPOINT, region_name=DYNAMO_REGION)
 
@@ -95,7 +95,12 @@ load_rooms_cache()
 
 @app.get("/rooms", response_model=List[Room])
 async def list_rooms():
-    return rooms
+    table = dynamodb.Table(ROOMS_TABLE)
+    scan = table.scan()
+    rs: List[Room] = []
+    for item in scan.get('Items', []):
+        rs.append(Room(id=int(item['id']), name=item['name']))
+    return rs
 
 @app.post("/rooms", response_model=Room)
 async def create_room(payload: RoomCreate):
@@ -108,27 +113,28 @@ async def create_room(payload: RoomCreate):
 
 @app.get("/rooms/{room_id}/messages", response_model=List[MessageOut])
 async def get_messages(room_id: int):
-    messages_by_room.setdefault(room_id, [])
-    if not messages_by_room[room_id]:
-        table = dynamodb.Table(MESSAGES_TABLE)
-        # Use strongly consistent reads so freshly written messages show up immediately
-        resp = table.query(KeyConditionExpression=Key('roomId').eq(room_id), ConsistentRead=True)
-        loaded: List[MessageOut] = []
-        for it in resp.get('Items', []):
-            loaded.append(MessageOut(
-                id=int(it['id']),
-                roomId=room_id,
-                text=it['text'],
-                user=it['user'],
-                timestamp=float(it['timestamp'])
-            ))
-        messages_by_room[room_id].extend(loaded)
-    return messages_by_room[room_id]
+    table = dynamodb.Table(MESSAGES_TABLE)
+    resp = table.query(
+        KeyConditionExpression=Key('roomId').eq(room_id),
+        ConsistentRead=True,
+        ScanIndexForward=True,  # asc po id-u
+    )
+    loaded: List[MessageOut] = []
+    for it in resp.get('Items', []):
+        loaded.append(MessageOut(
+            id=int(it['id']),
+            roomId=room_id,
+            text=it['text'],
+            user=it['user'],
+            timestamp=float(it['timestamp'])
+        ))
+    messages_by_room[room_id] = list(loaded)
+    return loaded
 
 @app.post("/rooms/{room_id}/messages", response_model=MessageOut)
 async def send_message(room_id: int, payload: MessageIn):
     messages_by_room.setdefault(room_id, [])
-    # Standardizacija oepet
+    # Standardizacija opet
     text = (payload.text or "").strip() or "..."
     user = payload.user or "Anon"
     msg = MessageOut(

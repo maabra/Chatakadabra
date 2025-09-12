@@ -4,14 +4,21 @@ const BACKENDS = (process.env.REACT_APP_API_BACKENDS || process.env.REACT_APP_AP
   .filter(Boolean)
   .filter((v, i, arr) => /^https?:\/\//i.test(v) && arr.indexOf(v) === i);
 
-  //Hashiranje ključa da bi se dobio index backenda, maltene RNG
+  // Hashiranje ključa da bi se dobio index backenda, maltene RNG
 function pickBackendByKey(key) {
   if (!key || BACKENDS.length === 0) return BACKENDS[0] || 'http://localhost:8001';
   const h = Math.abs(String(key).split('').reduce((a, c) => ((a << 5) - a) + c.charCodeAt(0), 0));
   const idx = h % BACKENDS.length;
   return BACKENDS[idx];
 }
-  //Wrapper
+
+  // Pravi RNG odabir backenda
+function pickRandomBackend() {
+  if (!BACKENDS.length) return 'http://localhost:8001';
+  const idx = Math.floor(Math.random() * BACKENDS.length);
+  return BACKENDS[idx];
+}
+  // Wrapper
 async function request(path, options = {}) {
   const base = options.base || BACKENDS[0] || 'http://localhost:8001';
   const res = await fetch(`${base}${path}`, {
@@ -46,4 +53,4 @@ export async function login(username, base) {
   return request('/login', { method: 'POST', body: JSON.stringify({ username }), base });
 }
 
-export const api = { BACKENDS, pickBackendByKey, getRooms, createRoom, getMessages, sendMessage, login };
+export const api = { BACKENDS, pickBackendByKey, pickRandomBackend, getRooms, createRoom, getMessages, sendMessage, login };
