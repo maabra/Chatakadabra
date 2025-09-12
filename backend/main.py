@@ -27,18 +27,31 @@ messages_by_room: Dict[int, List[MessageOut]] = {}
 users: Dict[int, str] = {}
 next_user_id: int = 1
 
-# DynamoDB postavke
-DYNAMO_ENDPOINT = os.getenv("DYNAMO_ENDPOINT")  # http://dynamodb-local:8000
+# DynamoDB postavke (primarna i sekundarna instanca)
+DYNAMO_ENDPOINT = os.getenv("DYNAMO_ENDPOINT")  # npr. http://dynamodb-local:8000
+DYNAMO_ENDPOINT_SECONDARY = os.getenv("DYNAMO_ENDPOINT_SECONDARY")  # npr. http://dynamodb-local-2:8000
 DYNAMO_REGION = os.getenv("AWS_REGION", "eu-central-1")
+
 session = boto3.session.Session()
-dynamodb = session.resource("dynamodb", endpoint_url=DYNAMO_ENDPOINT, region_name=DYNAMO_REGION)
+
+def _resource_for(endpoint: str | None):
+    if not endpoint:
+        return None
+    try:
+        return session.resource("dynamodb", endpoint_url=endpoint, region_name=DYNAMO_REGION)
+    except Exception:
+        return None
+
+primary_ddb = _resource_for(DYNAMO_ENDPOINT)
+secondary_ddb = _resource_for(DYNAMO_ENDPOINT_SECONDARY)
 
 ROOMS_TABLE = "chat_rooms"
 MESSAGES_TABLE = "chat_messages"
 
-# DynamoDB implementacija
-def ensure_tables():
-    client = dynamodb.meta.client
+def _ensure_tables_for(ddb):
+    if not ddb:
+        return
+    client = ddb.meta.client
     try:
         existing = client.list_tables().get('TableNames', [])
     except NoCredentialsError:
@@ -64,21 +77,40 @@ def ensure_tables():
     except ClientError:
         pass
 
-def seed_rooms_if_empty():
-    table = dynamodb.Table(ROOMS_TABLE)
-    resp = table.scan(Limit=1)
+def ensure_tables():
+    _ensure_tables_for(primary_ddb)
+    _ensure_tables_for(secondary_ddb)
+
+def seed_rooms_if_empty_for(ddb):
+    if not ddb:
+        return
+    table = ddb.Table(ROOMS_TABLE)
+    try:
+        resp = table.scan(Limit=1)
+    except Exception:
+        return
     if resp.get('Count', 0) == 0:
         base = [
             Room(id=1, name="General Chat"),
             Room(id=2, name="Test 1"),
             Room(id=3, name="Test 2"),
         ]
-        with table.batch_writer() as bw:
-            for r in base:
-                bw.put_item(Item={"id": r.id, "name": r.name})
+        try:
+            with table.batch_writer() as bw:
+                for r in base:
+                    bw.put_item(Item={"id": r.id, "name": r.name})
+        except Exception:
+            pass
+
+def seed_rooms_if_empty():
+    # Seed primarne i sekundarne ako su prazne
+    seed_rooms_if_empty_for(primary_ddb)
+    seed_rooms_if_empty_for(secondary_ddb)
 
 def load_rooms_cache():
-    table = dynamodb.Table(ROOMS_TABLE)
+    if not primary_ddb:
+        return
+    table = primary_ddb.Table(ROOMS_TABLE)
     scan = table.scan()
     rs: List[Room] = []
     for item in scan.get('Items', []):
@@ -95,7 +127,9 @@ load_rooms_cache()
 
 @app.get("/rooms", response_model=List[Room])
 async def list_rooms():
-    table = dynamodb.Table(ROOMS_TABLE)
+    if not primary_ddb:
+        return []
+    table = primary_ddb.Table(ROOMS_TABLE)
     scan = table.scan()
     rs: List[Room] = []
     for item in scan.get('Items', []):
@@ -106,18 +140,26 @@ async def list_rooms():
 async def create_room(payload: RoomCreate):
     new = Room(id=int(time.time() * 1000), name=payload.name)
     # Persist
-    dynamodb.Table(ROOMS_TABLE).put_item(Item={"id": new.id, "name": new.name})
+    if primary_ddb:
+        primary_ddb.Table(ROOMS_TABLE).put_item(Item={"id": new.id, "name": new.name})
+    if secondary_ddb:
+        try:
+            secondary_ddb.Table(ROOMS_TABLE).put_item(Item={"id": new.id, "name": new.name})
+        except Exception:
+            pass
     rooms.append(new)
     messages_by_room[new.id] = []
     return new
 
 @app.get("/rooms/{room_id}/messages", response_model=List[MessageOut])
 async def get_messages(room_id: int):
-    table = dynamodb.Table(MESSAGES_TABLE)
+    if not primary_ddb:
+        return []
+    table = primary_ddb.Table(MESSAGES_TABLE)
     resp = table.query(
         KeyConditionExpression=Key('roomId').eq(room_id),
         ConsistentRead=True,
-        ScanIndexForward=True,  # asc po id-u
+        ScanIndexForward=True,  # Asc po id-u
     )
     loaded: List[MessageOut] = []
     for it in resp.get('Items', []):
@@ -145,13 +187,20 @@ async def send_message(room_id: int, payload: MessageIn):
         timestamp=time.time(),
     )
     messages_by_room[room_id].append(msg)
-    dynamodb.Table(MESSAGES_TABLE).put_item(Item={
+    item = {
         "roomId": msg.roomId,
         "id": msg.id,
         "text": msg.text,
         "user": msg.user,
-    "timestamp": Decimal(str(msg.timestamp)),
-    })
+        "timestamp": Decimal(str(msg.timestamp)),
+    }
+    if primary_ddb:
+        primary_ddb.Table(MESSAGES_TABLE).put_item(Item=item)
+    if secondary_ddb:
+        try:
+            secondary_ddb.Table(MESSAGES_TABLE).put_item(Item=item)
+        except Exception:
+            pass
     return msg
 
 @app.post("/login")
@@ -161,4 +210,6 @@ async def login(payload: LoginIn):
     next_user_id += 1
     users[uid] = payload.username
     return {"id": uid, "username": payload.username}
+
+
 

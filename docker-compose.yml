@@ -24,11 +24,13 @@ services:
     environment:
       - PYTHONUNBUFFERED=1
       - DYNAMO_ENDPOINT=http://dynamodb-local:8000
+      - DYNAMO_ENDPOINT_SECONDARY=http://dynamodb-local-2:8000
       - AWS_ACCESS_KEY_ID=dummy
       - AWS_SECRET_ACCESS_KEY=dummy
       - AWS_REGION=eu-central-1
     depends_on:
       - dynamodb-local
+      - dynamodb-local-2
     restart: unless-stopped
 
   backend-2:
@@ -40,11 +42,13 @@ services:
     environment:
       - PYTHONUNBUFFERED=1
       - DYNAMO_ENDPOINT=http://dynamodb-local:8000
+      - DYNAMO_ENDPOINT_SECONDARY=http://dynamodb-local-2:8000
       - AWS_ACCESS_KEY_ID=dummy
       - AWS_SECRET_ACCESS_KEY=dummy
       - AWS_REGION=eu-central-1
     depends_on:
       - dynamodb-local
+      - dynamodb-local-2
     restart: unless-stopped
 
   backend-3:
@@ -56,16 +60,25 @@ services:
     environment:
       - PYTHONUNBUFFERED=1
       - DYNAMO_ENDPOINT=http://dynamodb-local:8000
+      - DYNAMO_ENDPOINT_SECONDARY=http://dynamodb-local-2:8000
       - AWS_ACCESS_KEY_ID=dummy
       - AWS_SECRET_ACCESS_KEY=dummy
       - AWS_REGION=eu-central-1
     depends_on:
       - dynamodb-local
+      - dynamodb-local-2
     restart: unless-stopped
 
   dynamodb-local:
     image: amazon/dynamodb-local:latest
     ports:
       - "8000:8000"
+    command: -jar DynamoDBLocal.jar -sharedDb -inMemory
+    restart: unless-stopped
+
+  dynamodb-local-2:
+    image: amazon/dynamodb-local:latest
+    ports:
+      - "8004:8000"
     command: -jar DynamoDBLocal.jar -sharedDb -inMemory
     restart: unless-stopped
